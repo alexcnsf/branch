@@ -12,14 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { auth, db } from '../config/firebase';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 
 const ViewProfileScreen = ({ route, navigation }) => {
-  const { userId } = route.params; // Get the userId from navigation params
+  const { userId } = route.params;
   const [profile, setProfile] = useState(null);
-  const [connectionDegree, setConnectionDegree] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activities, setActivities] = useState([]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -31,7 +29,6 @@ const ViewProfileScreen = ({ route, navigation }) => {
       setLoading(true);
       setError(null);
       
-      // Get the profile data of the user we're viewing
       const userDoc = await getDoc(doc(db, 'users', userId));
       
       if (!userDoc.exists()) {
@@ -43,19 +40,6 @@ const ViewProfileScreen = ({ route, navigation }) => {
       const userData = userDoc.data();
       setProfile(userData);
       
-      // Extract activities from the activityHistory
-      if (userData.activityHistory) {
-        const activitiesArray = Object.entries(userData.activityHistory).map(([name, count]) => ({
-          name,
-          count
-        })).sort((a, b) => b.count - a.count); // Sort by count in descending order
-        
-        setActivities(activitiesArray);
-      }
-      
-      // Calculate connection degree
-      await calculateConnectionDegree(userId);
-      
     } catch (error) {
       console.error('Error fetching profile:', error);
       setError('Failed to load profile');
@@ -64,65 +48,28 @@ const ViewProfileScreen = ({ route, navigation }) => {
     }
   };
 
-  const calculateConnectionDegree = async (targetUserId) => {
-    const currentUserId = auth.currentUser?.uid;
-    if (!currentUserId || currentUserId === targetUserId) {
-      return; // No need to calculate for self
-    }
-
-    try {
-      // Get current user's friends
-      const currentUserDoc = await getDoc(doc(db, 'users', currentUserId));
-      const currentUserFriends = currentUserDoc.data()?.friends || [];
-      
-      // 1st degree - direct friend
-      if (currentUserFriends.includes(targetUserId)) {
-        setConnectionDegree('1st');
-        return;
-      }
-      
-      // 2nd degree - friend of friend (simplified implementation)
-      let isSecondDegree = false;
-      
-      for (const friendId of currentUserFriends) {
-        const friendDoc = await getDoc(doc(db, 'users', friendId));
-        const friendFriends = friendDoc.data()?.friends || [];
-        
-        if (friendFriends.includes(targetUserId)) {
-          isSecondDegree = true;
-          break;
-        }
-      }
-      
-      if (isSecondDegree) {
-        setConnectionDegree('2nd');
-      } else {
-        setConnectionDegree('3rd+');
-      }
-      
-    } catch (error) {
-      console.error('Error calculating connection degree:', error);
-    }
-  };
-
   if (loading) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary.accent} />
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary.accent} />
+        </View>
       </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -137,7 +84,7 @@ const ViewProfileScreen = ({ route, navigation }) => {
           <Ionicons name="arrow-back" size={24} color={colors.primary.dark} />
         </TouchableOpacity>
         
-        {/* Header with profile photo, name and connection degree */}
+        {/* Header with profile photo and name */}
         <View style={styles.header}>
           <View style={styles.profileImageContainer}>
             {profile.profilePhoto ? (
@@ -158,16 +105,7 @@ const ViewProfileScreen = ({ route, navigation }) => {
                   console.log('Attempted URL:', typeof profile.profilePhoto === 'string' 
                     ? profile.profilePhoto 
                     : (profile.profilePhoto?.url || profile.profilePhoto));
-                  console.log('Error details:', {
-                    error: e.nativeEvent.error,
-                    errorCode: e.nativeEvent.errorCode,
-                    errorMessage: e.nativeEvent.errorMessage
-                  });
                 }}
-                onLoad={() => console.log('Image loaded successfully')}
-                onLoadStart={() => console.log('Starting to load image')}
-                onLoadEnd={() => console.log('Finished loading image')}
-                onProgress={(e) => console.log('Loading progress:', e.nativeEvent.loaded / e.nativeEvent.total)}
               />
             ) : (
               <View style={styles.profileImagePlaceholder}>
@@ -180,11 +118,6 @@ const ViewProfileScreen = ({ route, navigation }) => {
           
           <View style={styles.nameContainer}>
             <Text style={styles.name}>{profile.name}</Text>
-            {connectionDegree && (
-              <View style={styles.connectionBadge}>
-                <Text style={styles.connectionText}>{connectionDegree}</Text>
-              </View>
-            )}
           </View>
         </View>
         
@@ -193,23 +126,6 @@ const ViewProfileScreen = ({ route, navigation }) => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
             <Text style={styles.bioText}>{profile.bio}</Text>
-          </View>
-        )}
-        
-        {/* Activity badges section */}
-        {activities.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Activities</Text>
-            <View style={styles.activitiesBadgesContainer}>
-              {activities.map((activity, index) => (
-                <View key={index} style={styles.activityBadge}>
-                  <View style={styles.badgeCircle}>
-                    <Text style={styles.badgeCount}>{activity.count}</Text>
-                  </View>
-                  <Text style={styles.badgeName}>{activity.name}</Text>
-                </View>
-              ))}
-            </View>
           </View>
         )}
         
@@ -226,6 +142,25 @@ const ViewProfileScreen = ({ route, navigation }) => {
             </View>
           </View>
         )}
+
+        {/* Can Drive section */}
+        {profile.canDrive && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Transportation</Text>
+            <View style={styles.driverInfo}>
+              <Ionicons name="car" size={24} color={colors.primary.accent} />
+              <Text style={styles.driverText}>Can drive</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Notes section */}
+        {profile.notes && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Notes</Text>
+            <Text style={styles.notesText}>{profile.notes}</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -234,20 +169,18 @@ const ViewProfileScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.light,
+    backgroundColor: colors.primary.white,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background.light,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: colors.background.light,
   },
   errorText: {
     fontSize: 18,
@@ -273,7 +206,6 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
     alignItems: 'center',
-    backgroundColor: colors.background.light,
   },
   profileImageContainer: {
     width: 120,
@@ -291,7 +223,7 @@ const styles = StyleSheet.create({
   profileImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: colors.secondary.light,
+    backgroundColor: colors.secondary.cream,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -309,20 +241,10 @@ const styles = StyleSheet.create({
     color: colors.primary.dark,
     marginBottom: 8,
   },
-  connectionBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    backgroundColor: colors.primary.accent,
-    borderRadius: 16,
-  },
-  connectionText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
   section: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: colors.secondary.light,
+    borderTopColor: colors.secondary.cream,
   },
   sectionTitle: {
     fontSize: 18,
@@ -340,7 +262,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   interestTag: {
-    backgroundColor: colors.secondary.light,
+    backgroundColor: colors.secondary.cream,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -350,34 +272,19 @@ const styles = StyleSheet.create({
   interestText: {
     color: colors.primary.dark,
   },
-  activitiesBadgesContainer: {
+  driverInfo: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  activityBadge: {
     alignItems: 'center',
-    width: 80,
-    marginRight: 12,
-    marginBottom: 16,
   },
-  badgeCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.primary.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  badgeCount: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  badgeName: {
+  driverText: {
+    marginLeft: 8,
+    fontSize: 16,
     color: colors.primary.dark,
-    textAlign: 'center',
-    fontSize: 14,
+  },
+  notesText: {
+    fontSize: 16,
+    color: colors.primary.dark,
+    lineHeight: 24,
   },
 });
 

@@ -140,8 +140,43 @@ const CommunitiesScreen = ({ navigation }) => {
 
   const CommunityCard = ({ community, isJoined }) => {
     const [localAvailability, setLocalAvailability] = useState(
-      community.availability || [false, false, false, false, false, false, false]
+      Array(7).fill(false)
     );
+
+    useEffect(() => {
+      if (isJoined) {
+        fetchUserAvailability();
+      }
+    }, [isJoined, community.id]);
+
+    const fetchUserAvailability = async () => {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
+
+        const communityRef = doc(db, 'communities', community.id);
+        const communityDoc = await getDoc(communityRef);
+        
+        if (communityDoc.exists()) {
+          const communityData = communityDoc.data();
+          const activeMembers = communityData.activeMembers || {};
+          
+          // Initialize availability array
+          const availability = Array(7).fill(false);
+          
+          // Check each day for the user's presence
+          Object.entries(activeMembers).forEach(([dayIndex, members]) => {
+            if (members.includes(currentUser.uid)) {
+              availability[parseInt(dayIndex)] = true;
+            }
+          });
+          
+          setLocalAvailability(availability);
+        }
+      } catch (error) {
+        console.error('Error fetching user availability:', error);
+      }
+    };
 
     const handleToggleAvailability = async (index) => {
       try {
@@ -182,12 +217,6 @@ const CommunitiesScreen = ({ navigation }) => {
             [`activeMembers.${index}`]: updatedActiveMembers
           });
         }
-
-        // Update the user's availability in their document
-        const userRef = doc(db, 'users', currentUser.uid);
-        await updateDoc(userRef, {
-          availability: newAvailability
-        });
       } catch (error) {
         console.error('Error updating availability:', error);
         Alert.alert('Error', 'Failed to update availability. Please try again.');

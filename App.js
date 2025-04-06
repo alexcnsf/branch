@@ -15,6 +15,7 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import MessagingScreen from './src/screens/MessagingScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import ViewProfileScreen from './src/screens/ViewProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -43,6 +44,11 @@ function CommunitiesStack() {
         component={DiscoverScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen 
+        name="ViewProfile" 
+        component={ViewProfileScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 }
@@ -60,6 +66,11 @@ function MessagesStack() {
         component={ChatScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen 
+        name="ViewProfile" 
+        component={ViewProfileScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 }
@@ -73,8 +84,6 @@ function MainTabs() {
 
           if (route.name === 'Communities') {
             iconName = focused ? 'people' : 'people-outline';
-          } else if (route.name === 'Discover') {
-            iconName = focused ? 'planet' : 'planet-outline';
           } else if (route.name === 'Messages') {
             iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
           } else if (route.name === 'Profile') {
@@ -94,11 +103,6 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Communities" component={CommunitiesStack} />
-      <Tab.Screen 
-        name="Discover" 
-        component={DiscoverScreen}
-        initialParams={{ communityId: '1' }}
-      />
       <Tab.Screen name="Messages" component={MessagesStack} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

@@ -9,6 +9,7 @@ import {
   FlatList,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
@@ -22,26 +23,26 @@ const DiscoverScreen = ({ route, navigation }) => {
   const [checkedMatches, setCheckedMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [community, setCommunity] = useState(null);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [userNotes, setUserNotes] = useState('');
+  const [tempNotes, setTempNotes] = useState('');
 
   useEffect(() => {
-    console.log('DiscoverScreen mounted with communityId:', communityId);
     fetchCommunity();
     fetchCheckedMatches();
+    fetchUserNotes();
   }, [communityId]);
 
   const fetchCommunity = async () => {
     try {
-      console.log('Fetching community data for ID:', communityId);
       const communityRef = doc(db, 'communities', communityId);
       const communityDoc = await getDoc(communityRef);
       
       if (communityDoc.exists()) {
         const communityData = communityDoc.data();
-        console.log('Community data:', communityData);
         setCommunity(communityData);
         fetchActiveMembers(communityData);
       } else {
-        console.log('Community document does not exist');
         Alert.alert('Error', 'Community not found');
       }
     } catch (error) {
@@ -94,7 +95,6 @@ const DiscoverScreen = ({ route, navigation }) => {
         }
       }
 
-      console.log('Found matches:', matches);
       setMatches(matches);
     } catch (error) {
       console.error('Error fetching active members:', error);
@@ -119,6 +119,43 @@ const DiscoverScreen = ({ route, navigation }) => {
     }
   };
 
+  const fetchUserNotes = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setUserNotes(userData.notes || '');
+        setTempNotes(userData.notes || '');
+      }
+    } catch (error) {
+      console.error('Error fetching user notes:', error);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        notes: tempNotes
+      });
+      setUserNotes(tempNotes);
+      setIsEditingNotes(false);
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      Alert.alert('Error', 'Failed to save notes. Please try again.');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setTempNotes(userNotes);
+    setIsEditingNotes(false);
+  };
+
   const handleCheckMatch = async (match) => {
     try {
       const currentUser = auth.currentUser;
@@ -126,9 +163,6 @@ const DiscoverScreen = ({ route, navigation }) => {
         Alert.alert('Error', 'Please sign in to check members');
         return;
       }
-
-      console.log('Checking match with:', match.id);
-      console.log('Current user:', currentUser.uid);
 
       // Update local state
       setCheckedMatches(prev => [...prev, match.id]);
@@ -145,14 +179,10 @@ const DiscoverScreen = ({ route, navigation }) => {
       
       if (matchDoc.exists()) {
         const matchData = matchDoc.data();
-        console.log('Match data:', matchData);
         
         if (matchData.checkedMatches?.includes(currentUser.uid)) {
-          console.log('Mutual match detected! Creating chat...');
-          
           // Create a unique chat ID by sorting user IDs
           const chatId = [currentUser.uid, match.id].sort().join('_');
-          console.log('Creating chat with ID:', chatId);
           
           // Create chat document
           await setDoc(doc(db, 'chats', chatId), {
@@ -160,7 +190,7 @@ const DiscoverScreen = ({ route, navigation }) => {
             createdAt: new Date(),
             lastMessage: null,
             lastMessageTime: new Date(),
-            messages: [], // Initialize empty messages array
+            messages: [],
             participantsData: {
               [currentUser.uid]: {
                 name: currentUser.displayName || 'User',
@@ -174,7 +204,6 @@ const DiscoverScreen = ({ route, navigation }) => {
           });
 
           // Add chat reference to both users' chat list
-          // First, get the current chats array to ensure we don't duplicate
           const currentUserDoc = await getDoc(userRef);
           const matchUserDoc = await getDoc(matchRef);
           
@@ -185,20 +214,16 @@ const DiscoverScreen = ({ route, navigation }) => {
             await updateDoc(userRef, {
               chats: arrayUnion(chatId)
             });
-            console.log('Added chat to current user');
           }
 
           if (!matchUserChats.includes(chatId)) {
             await updateDoc(matchRef, {
               chats: arrayUnion(chatId)
             });
-            console.log('Added chat to match user');
           }
 
-          console.log('Chat created and references added successfully');
           Alert.alert('Match!', `You and ${match.name} have matched! A chat has been created.`);
         } else {
-          console.log('No mutual match yet');
           Alert.alert('Success', `You've checked ${match.name}! You'll be notified if they check you back.`);
         }
       }
@@ -212,38 +237,27 @@ const DiscoverScreen = ({ route, navigation }) => {
     <View style={styles.matchCard}>
       <View style={styles.matchHeader}>
         <View style={styles.profileInfo}>
-          <Image 
-            source={{ 
-              uri: match.profilePhoto 
-                ? (typeof match.profilePhoto === 'string' 
-                    ? match.profilePhoto 
-                    : (match.profilePhoto.url || match.profilePhoto))
-                : 'https://via.placeholder.com/40',
-              headers: {
-                'Accept': 'image/jpeg,image/png,image/*',
-                'User-Agent': 'Mozilla/5.0'
-              }
-            }} 
-            style={styles.profilePhoto}
-            onError={(e) => {
-              console.log('Image loading error:', e.nativeEvent.error);
-              console.log('Profile photo data:', match.profilePhoto);
-              console.log('Attempted URL:', match.profilePhoto 
-                ? (typeof match.profilePhoto === 'string' 
-                    ? match.profilePhoto 
-                    : (match.profilePhoto.url || match.profilePhoto))
-                : 'https://via.placeholder.com/40');
-              console.log('Error details:', {
-                error: e.nativeEvent.error,
-                errorCode: e.nativeEvent.errorCode,
-                errorMessage: e.nativeEvent.errorMessage
-              });
-            }}
-            onLoad={() => console.log('Image loaded successfully')}
-            onLoadStart={() => console.log('Starting to load image')}
-            onLoadEnd={() => console.log('Finished loading image')}
-            onProgress={(e) => console.log('Loading progress:', e.nativeEvent.loaded / e.nativeEvent.total)}
-          />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ViewProfile', { userId: match.id })}
+          >
+            <Image 
+              source={{ 
+                uri: match.profilePhoto 
+                  ? (typeof match.profilePhoto === 'string' 
+                      ? match.profilePhoto 
+                      : (match.profilePhoto.url || match.profilePhoto))
+                  : 'https://via.placeholder.com/40',
+                headers: {
+                  'Accept': 'image/jpeg,image/png,image/*',
+                  'User-Agent': 'Mozilla/5.0'
+                }
+              }} 
+              style={styles.profilePhoto}
+              onError={(e) => {
+                console.error('Image loading error:', e.nativeEvent.error);
+              }}
+            />
+          </TouchableOpacity>
           <View style={styles.nameContainer}>
             <Text style={styles.matchName}>{match.name}</Text>
           </View>
@@ -290,6 +304,52 @@ const DiscoverScreen = ({ route, navigation }) => {
     </View>
   );
 
+  const NotesSection = () => (
+    <View style={styles.notesSection}>
+      {isEditingNotes ? (
+        <View style={styles.notesEditContainer}>
+          <TextInput
+            style={styles.notesInput}
+            value={tempNotes}
+            onChangeText={setTempNotes}
+            placeholder="Add a note about yourself..."
+            placeholderTextColor={colors.secondary.gray}
+            multiline
+            maxLength={200}
+            autoFocus={true}
+            blurOnSubmit={false}
+          />
+          <View style={styles.notesEditButtons}>
+            <TouchableOpacity
+              style={[styles.notesButton, styles.cancelButton]}
+              onPress={handleCancelEdit}
+            >
+              <Ionicons name="close" size={20} color={colors.primary.main} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.notesButton, styles.saveButton]}
+              onPress={handleSaveNotes}
+            >
+              <Ionicons name="checkmark" size={20} color={colors.primary.white} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.notesDisplayContainer}>
+          <Text style={styles.notesText}>
+            {userNotes || 'Add a note about yourself...'}
+          </Text>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => setIsEditingNotes(true)}
+          >
+            <Ionicons name="pencil" size={16} color={colors.primary.accent} />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -303,8 +363,13 @@ const DiscoverScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView 
+        style={styles.scrollView}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
+      >
         <Text style={styles.sectionTitle}>{community?.name || 'Community'}</Text>
+        <NotesSection />
         {matches.length > 0 ? (
           <FlatList
             data={matches}
@@ -315,7 +380,7 @@ const DiscoverScreen = ({ route, navigation }) => {
           />
         ) : (
           <Text style={styles.emptyText}>
-            No active members in this community
+            Loading Members...
           </Text>
         )}
       </ScrollView>
@@ -456,6 +521,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.secondary.gray,
     fontFamily: 'Beatrice',
+  },
+  notesSection: {
+    backgroundColor: colors.primary.white,
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  notesEditContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  notesInput: {
+    flex: 1,
+    minHeight: 60,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: colors.secondary.cream,
+    borderRadius: 8,
+    color: colors.text.dark,
+    fontFamily: 'Beatrice',
+    fontSize: 14,
+  },
+  notesEditButtons: {
+    flexDirection: 'row',
+    marginLeft: 8,
+  },
+  notesButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  cancelButton: {
+    backgroundColor: colors.secondary.cream,
+  },
+  saveButton: {
+    backgroundColor: colors.primary.accent,
+  },
+  notesDisplayContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  notesText: {
+    flex: 1,
+    color: colors.text.dark,
+    fontFamily: 'Beatrice',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  editButton: {
+    padding: 4,
+    marginLeft: 8,
   },
 });
 

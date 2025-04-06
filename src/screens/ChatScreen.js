@@ -90,7 +90,7 @@ const ChatScreen = ({ route, navigation }) => {
           <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText]}>
             {item.text}
           </Text>
-          <Text style={styles.timestamp}>
+          <Text style={[styles.timestamp, isMe && styles.myTimestamp]}>
             {new Date(item.timestamp?.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
@@ -211,6 +211,9 @@ const styles = StyleSheet.create({
     color: colors.secondary.gray,
     marginTop: 4,
     alignSelf: 'flex-end',
+  },
+  myTimestamp: {
+    color: '#E0E0E0',
   },
   inputContainer: {
     flexDirection: 'row',
