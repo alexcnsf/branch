@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
@@ -20,6 +21,7 @@ const CommunitiesScreen = ({ navigation }) => {
   const [userCommunities, setUserCommunities] = useState([]);
   const [allCommunities, setAllCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [joiningCommunity, setJoiningCommunity] = useState(null);
 
   useEffect(() => {
     fetchUserCommunities();
@@ -37,6 +39,7 @@ const CommunitiesScreen = ({ navigation }) => {
       setAllCommunities(communities);
     } catch (error) {
       console.error('Error fetching communities:', error);
+      Alert.alert('Error', 'Failed to load communities. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -45,7 +48,10 @@ const CommunitiesScreen = ({ navigation }) => {
   const fetchUserCommunities = async () => {
     try {
       const currentUser = auth.currentUser;
-      if (!currentUser) return;
+      if (!currentUser) {
+        setUserCommunities([]);
+        return;
+      }
 
       const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
       if (userDoc.exists()) {
@@ -54,19 +60,26 @@ const CommunitiesScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error fetching user communities:', error);
+      Alert.alert('Error', 'Failed to load your communities. Please try again.');
     }
   };
 
   const handleJoinCommunity = async (communityId) => {
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        Alert.alert('Error', 'Please sign in to join communities');
-        return;
-      }
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      Alert.alert(
+        'Sign In Required',
+        'Please sign in to join communities',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => navigation.navigate('Login') }
+        ]
+      );
+      return;
+    }
 
-      // Update local state
-      setUserCommunities(prev => [...prev, communityId]);
+    try {
+      setJoiningCommunity(communityId);
 
       // Update user's communities in Firestore
       const userRef = doc(db, 'users', currentUser.uid);
@@ -74,16 +87,26 @@ const CommunitiesScreen = ({ navigation }) => {
         communities: arrayUnion(communityId)
       });
 
-      // Update community's members count
+      // Update community's members in Firestore
       const communityRef = doc(db, 'communities', communityId);
       await updateDoc(communityRef, {
         members: arrayUnion(currentUser.uid)
       });
 
+      // Update local state
+      setUserCommunities(prev => [...prev, communityId]);
+      
+      // Show success message
       Alert.alert('Success', 'You have joined the community!');
+      
+      // Refresh the communities lists
+      fetchAllCommunities();
+      fetchUserCommunities();
     } catch (error) {
       console.error('Error joining community:', error);
       Alert.alert('Error', 'Failed to join community. Please try again.');
+    } finally {
+      setJoiningCommunity(null);
     }
   };
 
@@ -120,12 +143,58 @@ const CommunitiesScreen = ({ navigation }) => {
       community.availability || [false, false, false, false, false, false, false]
     );
 
-    const handleToggleAvailability = (index) => {
-      const newAvailability = [...localAvailability];
-      newAvailability[index] = !newAvailability[index];
-      setLocalAvailability(newAvailability);
-      // In a real app, you would update this in your database
+    const handleToggleAvailability = async (index) => {
+      try {
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          Alert.alert(
+            'Sign In Required',
+            'Please sign in to set your availability',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Sign In', onPress: () => navigation.navigate('Login') }
+            ]
+          );
+          return;
+        }
+
+        const newAvailability = [...localAvailability];
+        newAvailability[index] = !newAvailability[index];
+        setLocalAvailability(newAvailability);
+
+        // Update the community document
+        const communityRef = doc(db, 'communities', community.id);
+        
+        if (newAvailability[index]) {
+          // Add user to activeMembers for this day
+          await updateDoc(communityRef, {
+            [`activeMembers.${index}`]: arrayUnion(currentUser.uid)
+          });
+        } else {
+          // Remove user from activeMembers for this day
+          const communityDoc = await getDoc(communityRef);
+          const currentActiveMembers = communityDoc.data()?.activeMembers?.[index] || [];
+          const updatedActiveMembers = currentActiveMembers.filter(
+            memberId => memberId !== currentUser.uid
+          );
+          
+          await updateDoc(communityRef, {
+            [`activeMembers.${index}`]: updatedActiveMembers
+          });
+        }
+      } catch (error) {
+        console.error('Error updating availability:', error);
+        Alert.alert('Error', 'Failed to update availability. Please try again.');
+        // Revert local state on error
+        setLocalAvailability(prev => {
+          const reverted = [...prev];
+          reverted[index] = !reverted[index];
+          return reverted;
+        });
+      }
     };
+
+    const isJoining = joiningCommunity === community.id;
 
     return (
       <TouchableOpacity
@@ -135,26 +204,37 @@ const CommunitiesScreen = ({ navigation }) => {
         <Image source={{ uri: community.image }} style={styles.communityImage} />
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
-            <Text style={styles.communityName}>{community.name}</Text>
+            <View style={styles.headerLeft}>
+              <Text style={styles.communityName}>{community.name}</Text>
+              <Text style={styles.memberCount}>
+                {community.members?.length || 0} members
+              </Text>
+            </View>
             {!isJoined && (
               <TouchableOpacity
-                style={styles.addButton}
+                style={[styles.addButton, isJoining && styles.addButtonDisabled]}
                 onPress={() => handleJoinCommunity(community.id)}
+                disabled={isJoining}
               >
-                <Ionicons name="add-circle" size={28} color={colors.primary.accent} />
+                {isJoining ? (
+                  <ActivityIndicator size="small" color={colors.primary.accent} />
+                ) : (
+                  <Ionicons name="add-circle" size={28} color={colors.primary.accent} />
+                )}
               </TouchableOpacity>
             )}
           </View>
+          
+          <Text style={styles.description} numberOfLines={2}>
+            {community.description}
+          </Text>
+
           {isJoined && (
             <AvailabilityIndicator 
               availability={localAvailability} 
               onToggle={handleToggleAvailability}
             />
           )}
-          <View style={styles.memberInfo}>
-            <Text style={styles.memberCount}>{community.members?.length || 0} members</Text>
-            <Text style={styles.friendCount}>{community.friends || 0} friends</Text>
-          </View>
         </View>
       </TouchableOpacity>
     );
@@ -172,6 +252,7 @@ const CommunitiesScreen = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary.accent} />
           <Text style={styles.loadingText}>Loading communities...</Text>
         </View>
       </SafeAreaView>
@@ -191,9 +272,15 @@ const CommunitiesScreen = ({ navigation }) => {
       </View>
       <ScrollView style={styles.scrollView}>
         <Text style={styles.sectionTitle}>Your Communities</Text>
-        {joinedCommunities.map((community) => (
-          <CommunityCard key={community.id} community={community} isJoined={true} />
-        ))}
+        {joinedCommunities.length > 0 ? (
+          joinedCommunities.map((community) => (
+            <CommunityCard key={community.id} community={community} isJoined={true} />
+          ))
+        ) : (
+          <Text style={styles.emptyText}>
+            Join some communities to see them here!
+          </Text>
+        )}
         
         <Text style={styles.sectionTitle}>Suggested</Text>
         {suggestedCommunities.map((community) => (
@@ -234,7 +321,7 @@ const styles = StyleSheet.create({
     color: colors.primary.main,
     marginBottom: 16,
     marginTop: 8,
-    fontFamily: 'Beatrice', // Make sure to load this font in your app
+    fontFamily: 'Beatrice',
   },
   card: {
     backgroundColor: colors.primary.white,
@@ -255,18 +342,44 @@ const styles = StyleSheet.create({
   cardContent: {
     padding: 16,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  headerLeft: {
+    flex: 1,
+    marginRight: 16,
+  },
   communityName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: colors.primary.main,
+    marginBottom: 4,
+    fontFamily: 'Beatrice',
+  },
+  description: {
+    fontSize: 14,
+    color: colors.secondary.gray,
     marginBottom: 12,
     fontFamily: 'Beatrice',
+  },
+  memberCount: {
+    fontSize: 14,
+    color: colors.secondary.gray,
+    fontFamily: 'Beatrice',
+  },
+  addButton: {
+    padding: 4,
+  },
+  addButtonDisabled: {
+    opacity: 0.7,
   },
   availabilityContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    marginTop: 12,
   },
   availabilityButton: {
     width: 32,
@@ -276,7 +389,6 @@ const styles = StyleSheet.create({
     borderColor: colors.secondary.gray,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 2,
   },
   availabilityButtonSelected: {
     backgroundColor: colors.primary.accent,
@@ -291,37 +403,22 @@ const styles = StyleSheet.create({
   availabilityTextSelected: {
     color: colors.primary.white,
   },
-  memberInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  memberCount: {
-    color: colors.primary.main,
-    fontSize: 14,
-    fontFamily: 'Beatrice',
-  },
-  friendCount: {
-    color: colors.secondary.gray,
-    fontSize: 14,
-    fontFamily: 'Beatrice',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  addButton: {
-    padding: 4,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
+    marginTop: 16,
     fontSize: 16,
     color: colors.secondary.gray,
+    fontFamily: 'Beatrice',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: colors.secondary.gray,
+    fontSize: 16,
+    marginBottom: 24,
     fontFamily: 'Beatrice',
   },
 });
