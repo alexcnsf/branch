@@ -59,12 +59,12 @@ const EditProfileScreen = ({ navigation }) => {
         setName(userData.name || '');
         setBio(userData.bio || '');
         setInterests(userData.interests || []);
-        setProfileImage(userData.profileImage || null);
+        setProfileImage(userData.profilePhoto?.url || userData.profilePhoto || null);
         setOriginalData({
           name: userData.name || '',
           bio: userData.bio || '',
           interests: userData.interests || [],
-          profileImage: userData.profileImage || null,
+          profileImage: userData.profilePhoto?.url || userData.profilePhoto || null,
         });
       }
     } catch (error) {
@@ -137,9 +137,15 @@ const EditProfileScreen = ({ navigation }) => {
       // If the profile image is a URI (not a URL), it means it's a new image to upload
       if (profileImage && !profileImage.startsWith('http')) {
         const imageUrl = await uploadProfileImage(profileImage);
-        updatedData.profileImage = imageUrl;
+        updatedData.profilePhoto = {
+          url: imageUrl,
+          source: 'storage'
+        };
       } else if (profileImage) {
-        updatedData.profileImage = profileImage;
+        // If it's an existing URL, preserve the source if it exists
+        updatedData.profilePhoto = typeof originalData.profileImage === 'object' 
+          ? { ...originalData.profileImage, url: profileImage }
+          : { url: profileImage, source: 'storage' };
       }
       
       await updateDoc(doc(db, 'users', auth.currentUser.uid), updatedData);
@@ -148,7 +154,7 @@ const EditProfileScreen = ({ navigation }) => {
         name,
         bio,
         interests,
-        profileImage: updatedData.profileImage || null,
+        profileImage: updatedData.profilePhoto || null,
       });
       
       setHasChanges(false);

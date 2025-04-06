@@ -214,7 +214,11 @@ const DiscoverScreen = ({ route, navigation }) => {
         <View style={styles.profileInfo}>
           <Image 
             source={{ 
-              uri: match.profilePhoto || 'https://via.placeholder.com/40'
+              uri: match.profilePhoto 
+                ? (typeof match.profilePhoto === 'string' 
+                    ? match.profilePhoto 
+                    : match.profilePhoto.url)
+                : 'https://via.placeholder.com/40'
             }} 
             style={styles.profilePhoto} 
           />

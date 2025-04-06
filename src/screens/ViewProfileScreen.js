@@ -140,8 +140,11 @@ const ViewProfileScreen = ({ route, navigation }) => {
         {/* Header with profile photo, name and connection degree */}
         <View style={styles.header}>
           <View style={styles.profileImageContainer}>
-            {profile.profileImage ? (
-              <Image source={{ uri: profile.profileImage }} style={styles.profileImage} />
+            {profile.profilePhoto ? (
+              <Image 
+                source={{ uri: typeof profile.profilePhoto === 'string' ? profile.profilePhoto : profile.profilePhoto.url }} 
+                style={styles.profileImage} 
+              />
             ) : (
               <View style={styles.profileImagePlaceholder}>
                 <Text style={styles.placeholderText}>
