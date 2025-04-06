@@ -85,7 +85,7 @@ const DiscoverScreen = ({ route, navigation }) => {
           matches.push({
             id: userId,
             name: userData.name,
-            profilePhoto: userData.photoURL || userData.profileImage || null,
+            profilePhoto: userData.profilePhoto || userData.photoURL || userData.profileImage || null,
             availability: communityAvailability,
             canDrive: userData.canDrive || false,
             notes: userData.notes || '',
@@ -217,10 +217,32 @@ const DiscoverScreen = ({ route, navigation }) => {
               uri: match.profilePhoto 
                 ? (typeof match.profilePhoto === 'string' 
                     ? match.profilePhoto 
-                    : match.profilePhoto.url)
-                : 'https://via.placeholder.com/40'
+                    : (match.profilePhoto.url || match.profilePhoto))
+                : 'https://via.placeholder.com/40',
+              headers: {
+                'Accept': 'image/jpeg,image/png,image/*',
+                'User-Agent': 'Mozilla/5.0'
+              }
             }} 
-            style={styles.profilePhoto} 
+            style={styles.profilePhoto}
+            onError={(e) => {
+              console.log('Image loading error:', e.nativeEvent.error);
+              console.log('Profile photo data:', match.profilePhoto);
+              console.log('Attempted URL:', match.profilePhoto 
+                ? (typeof match.profilePhoto === 'string' 
+                    ? match.profilePhoto 
+                    : (match.profilePhoto.url || match.profilePhoto))
+                : 'https://via.placeholder.com/40');
+              console.log('Error details:', {
+                error: e.nativeEvent.error,
+                errorCode: e.nativeEvent.errorCode,
+                errorMessage: e.nativeEvent.errorMessage
+              });
+            }}
+            onLoad={() => console.log('Image loaded successfully')}
+            onLoadStart={() => console.log('Starting to load image')}
+            onLoadEnd={() => console.log('Finished loading image')}
+            onProgress={(e) => console.log('Loading progress:', e.nativeEvent.loaded / e.nativeEvent.total)}
           />
           <View style={styles.nameContainer}>
             <Text style={styles.matchName}>{match.name}</Text>

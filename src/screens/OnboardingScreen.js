@@ -16,7 +16,7 @@ const OnboardingScreen = ({ navigation }) => {
         <View style={styles.iconContainer}>
           <Ionicons name="leaf" size={120} color={colors.primary.accent} />
         </View>
-        <Text style={styles.title}>Welcome to Outdoors</Text>
+        <Text style={styles.title}>Welcome to Branch</Text>
         <Text style={styles.subtitle}>
           Connect with like-minded outdoor enthusiasts and discover new adventures
         </Text>

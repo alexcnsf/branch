@@ -59,12 +59,16 @@ const EditProfileScreen = ({ navigation }) => {
         setName(userData.name || '');
         setBio(userData.bio || '');
         setInterests(userData.interests || []);
-        setProfileImage(userData.profilePhoto?.url || userData.profilePhoto || null);
+        setProfileImage(
+          userData.profilePhoto?.url || 
+          (typeof userData.profilePhoto === 'string' ? userData.profilePhoto : null)
+        );
         setOriginalData({
           name: userData.name || '',
           bio: userData.bio || '',
           interests: userData.interests || [],
-          profileImage: userData.profilePhoto?.url || userData.profilePhoto || null,
+          profileImage: userData.profilePhoto?.url || 
+            (typeof userData.profilePhoto === 'string' ? userData.profilePhoto : null),
         });
       }
     } catch (error) {
@@ -139,13 +143,22 @@ const EditProfileScreen = ({ navigation }) => {
         const imageUrl = await uploadProfileImage(profileImage);
         updatedData.profilePhoto = {
           url: imageUrl,
-          source: 'storage'
+          source: 'storage',
+          type: 'image/jpeg'
         };
       } else if (profileImage) {
         // If it's an existing URL, preserve the source if it exists
         updatedData.profilePhoto = typeof originalData.profileImage === 'object' 
-          ? { ...originalData.profileImage, url: profileImage }
-          : { url: profileImage, source: 'storage' };
+          ? { 
+              ...originalData.profileImage, 
+              url: profileImage,
+              type: 'image/jpeg'
+            }
+          : { 
+              url: profileImage, 
+              source: 'storage',
+              type: 'image/jpeg'
+            };
       }
       
       await updateDoc(doc(db, 'users', auth.currentUser.uid), updatedData);

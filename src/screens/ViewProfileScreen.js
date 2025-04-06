@@ -142,8 +142,32 @@ const ViewProfileScreen = ({ route, navigation }) => {
           <View style={styles.profileImageContainer}>
             {profile.profilePhoto ? (
               <Image 
-                source={{ uri: typeof profile.profilePhoto === 'string' ? profile.profilePhoto : profile.profilePhoto.url }} 
-                style={styles.profileImage} 
+                source={{ 
+                  uri: typeof profile.profilePhoto === 'string' 
+                    ? profile.profilePhoto 
+                    : (profile.profilePhoto?.url || profile.profilePhoto),
+                  headers: {
+                    'Accept': 'image/jpeg,image/png,image/*',
+                    'User-Agent': 'Mozilla/5.0'
+                  }
+                }} 
+                style={styles.profileImage}
+                onError={(e) => {
+                  console.log('Image loading error:', e.nativeEvent.error);
+                  console.log('Profile photo data:', profile.profilePhoto);
+                  console.log('Attempted URL:', typeof profile.profilePhoto === 'string' 
+                    ? profile.profilePhoto 
+                    : (profile.profilePhoto?.url || profile.profilePhoto));
+                  console.log('Error details:', {
+                    error: e.nativeEvent.error,
+                    errorCode: e.nativeEvent.errorCode,
+                    errorMessage: e.nativeEvent.errorMessage
+                  });
+                }}
+                onLoad={() => console.log('Image loaded successfully')}
+                onLoadStart={() => console.log('Starting to load image')}
+                onLoadEnd={() => console.log('Finished loading image')}
+                onProgress={(e) => console.log('Loading progress:', e.nativeEvent.loaded / e.nativeEvent.total)}
               />
             ) : (
               <View style={styles.profileImagePlaceholder}>
