@@ -13,12 +13,13 @@ import DiscoverScreen from './src/screens/DiscoverScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
+import MessagingScreen from './src/screens/MessagingScreen';
+import ChatScreen from './src/screens/ChatScreen';
 
 // Temporary placeholder screens until we create the actual components
-const MessagesScreen = () => (
+const ProfileScreen = () => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Messages Screen</Text>
+    <Text>Profile Screen</Text>
   </View>
 );
 
@@ -47,6 +48,23 @@ function CommunitiesStack() {
       <Stack.Screen 
         name="Discover" 
         component={DiscoverScreen}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+function MessagesStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="MessagesList" 
+        component={MessagingScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="Chat" 
+        component={ChatScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
@@ -88,7 +106,7 @@ function MainTabs() {
         component={DiscoverScreen}
         initialParams={{ communityId: '1' }}
       />
-      <Tab.Screen name="Messages" component={MessagesScreen} />
+      <Tab.Screen name="Messages" component={MessagesStack} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

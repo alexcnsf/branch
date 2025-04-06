@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '../config/firebase';
-import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 
 const MessagingScreen = ({ navigation }) => {
   const [chats, setChats] = useState([]);
@@ -57,18 +57,18 @@ const MessagingScreen = ({ navigation }) => {
         const chatPromises = chatIds.map(async (chatId) => {
           try {
             console.log('Fetching chat:', chatId);
-            const chatDoc = await getDocs(query(collection(db, 'chats'), where('id', '==', chatId)));
+            const chatDoc = await getDoc(doc(db, 'chats', chatId));
             
-            if (!chatDoc.empty) {
-              const chatData = chatDoc.docs[0].data();
+            if (chatDoc.exists()) {
+              const chatData = chatDoc.data();
               console.log('Chat data for', chatId, ':', chatData);
               
               // Get the other user's data
               const otherUserId = chatData.participants.find(id => id !== currentUser.uid);
               if (otherUserId) {
-                const otherUserDoc = await getDocs(query(collection(db, 'users'), where('id', '==', otherUserId)));
-                if (!otherUserDoc.empty) {
-                  const otherUserData = otherUserDoc.docs[0].data();
+                const otherUserDoc = await getDoc(doc(db, 'users', otherUserId));
+                if (otherUserDoc.exists()) {
+                  const otherUserData = otherUserDoc.data();
                   return {
                     id: chatId,
                     lastMessage: chatData.lastMessage || 'No messages yet',
