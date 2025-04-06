@@ -13,17 +13,12 @@ import DiscoverScreen from './src/screens/DiscoverScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 
 // Temporary placeholder screens until we create the actual components
 const MessagesScreen = () => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
     <Text>Messages Screen</Text>
-  </View>
-);
-
-const ProfileScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Profile Screen</Text>
   </View>
 );
 
