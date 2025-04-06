@@ -46,6 +46,9 @@ const SignupScreen = ({ navigation }) => {
         availability: [false, false, false, false, false, false, false],
       });
 
+      // Navigate to profile building screen
+      navigation.navigate('ProfileBuilding');
+
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {

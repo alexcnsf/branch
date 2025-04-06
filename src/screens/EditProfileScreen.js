@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { auth, db, storage } from '../config/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -28,6 +28,7 @@ const EditProfileScreen = ({ navigation }) => {
   const [profileImage, setProfileImage] = useState(null);
   const [originalData, setOriginalData] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     fetchUserData();
@@ -77,11 +78,20 @@ const EditProfileScreen = ({ navigation }) => {
 
   const handleImagePick = async () => {
     try {
+      // Request permissions first
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMessage('Sorry, we need camera roll permissions to make this work!');
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5,
+        quality: 0.5, // Compress image to 50% quality
+        maxWidth: 1000, // Limit image width
+        maxHeight: 1000, // Limit image height
       });
 
       if (!result.canceled) {
@@ -89,13 +99,21 @@ const EditProfileScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      setErrorMessage('Failed to pick image. Please try again.');
     }
   };
 
   const uploadProfileImage = async (uri) => {
     try {
+      if (!uri) {
+        throw new Error('No image URI provided');
+      }
+
       const response = await fetch(uri);
+      if (!response.ok) {
+        throw new Error('Failed to fetch image data');
+      }
+
       const blob = await response.blob();
       const filename = `profile_${auth.currentUser.uid}_${Date.now()}`;
       const storageRef = ref(storage, `profile_images/${filename}`);
@@ -104,7 +122,8 @@ const EditProfileScreen = ({ navigation }) => {
       return await getDownloadURL(storageRef);
     } catch (error) {
       console.error('Error uploading image:', error);
-      throw new Error('Failed to upload profile image');
+      setErrorMessage('Failed to upload image. Please try again.');
+      return null;
     }
   };
 
@@ -126,39 +145,32 @@ const EditProfileScreen = ({ navigation }) => {
     }
     
     try {
-      setSaving(true);
+      setLoading(true);
+      setErrorMessage(null);
       
-      let updatedData = {
+      const userId = auth.currentUser.uid;
+      let profileData = {
         name,
         bio,
         interests,
+        updatedAt: new Date(),
       };
       
-      // If the profile image is a URI (not a URL), it means it's a new image to upload
-      if (profileImage && !profileImage.startsWith('http')) {
+      if (profileImage) {
         const imageUrl = await uploadProfileImage(profileImage);
-        updatedData.profileImage = imageUrl;
-      } else if (profileImage) {
-        updatedData.profileImage = profileImage;
+        if (imageUrl) {
+          profileData.profileImage = imageUrl;
+        }
       }
       
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), updatedData);
-      
-      setOriginalData({
-        name,
-        bio,
-        interests,
-        profileImage: updatedData.profileImage || null,
-      });
-      
-      setHasChanges(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      await setDoc(doc(db, 'users', userId), profileData, { merge: true });
       navigation.goBack();
+      
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to save profile');
+      setErrorMessage('Failed to save profile. Please try again.');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 

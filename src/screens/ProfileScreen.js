@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { auth, db } from '../config/firebase';
+import { auth, db, storage } from '../config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 const ProfileScreen = ({ navigation }) => {
@@ -97,11 +97,14 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.header}>
           <View style={styles.profileImageContainer}>
             {profile.profileImage ? (
-              <Image source={{ uri: profile.profileImage }} style={styles.profileImage} />
+              <Image
+                source={{ uri: profile.profileImage }}
+                style={styles.profileImage}
+              />
             ) : (
               <View style={styles.profileImagePlaceholder}>
-                <Text style={styles.placeholderText}>
-                  {profile.name ? profile.name.charAt(0).toUpperCase() : "Y"}
+                <Text style={styles.profileImagePlaceholderText}>
+                  {profile.name ? profile.name.charAt(0).toUpperCase() : '?'}
                 </Text>
               </View>
             )}
@@ -222,7 +225,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  placeholderText: {
+  profileImagePlaceholderText: {
     fontSize: 48,
     fontWeight: 'bold',
     color: colors.primary.dark,

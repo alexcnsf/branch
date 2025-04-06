@@ -14,6 +14,8 @@ import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import ProfileBuildingScreen from './src/screens/ProfileBuildingScreen';
+import EditProfileScreen from './src/screens/EditProfileScreen';
 
 // Temporary placeholder screens until we create the actual components
 const MessagesScreen = () => (
@@ -32,6 +34,7 @@ function AuthNavigator() {
       <AuthStack.Screen name="Onboarding" component={OnboardingScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Signup" component={SignupScreen} />
+      <AuthStack.Screen name="ProfileBuilding" component={ProfileBuildingScreen} />
     </AuthStack.Navigator>
   );
 }
@@ -47,6 +50,23 @@ function CommunitiesStack() {
       <Stack.Screen 
         name="Discover" 
         component={DiscoverScreen}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+function ProfileStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="ProfileMain" 
+        component={ProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="EditProfile" 
+        component={EditProfileScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
@@ -89,7 +109,7 @@ function MainTabs() {
         initialParams={{ communityId: '1' }}
       />
       <Tab.Screen name="Messages" component={MessagesScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>
   );
 }

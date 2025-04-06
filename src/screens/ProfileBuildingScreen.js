@@ -32,22 +32,36 @@ const ProfileBuildingScreen = ({ navigation, route }) => {
       setErrorMessage('Please enter your name');
       return;
     }
+    if (step === 2 && interests.length === 0) {
+      setErrorMessage('Please add at least one interest');
+      return;
+    }
     
     setErrorMessage('');
     setStep(prev => prev + 1);
   };
 
   const handleBack = () => {
+    if (step === 1) return; // Prevent going back from step 1
     setStep(prev => prev - 1);
   };
 
   const handleImagePick = async () => {
     try {
+      // Request permissions first
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMessage('Sorry, we need camera roll permissions to make this work!');
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5,
+        quality: 0.5, // Compress image to 50% quality
+        maxWidth: 1000, // Limit image width
+        maxHeight: 1000, // Limit image height
       });
 
       if (!result.canceled) {
@@ -55,6 +69,7 @@ const ProfileBuildingScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error picking image:', error);
+      setErrorMessage('Failed to pick image. Please try again.');
     }
   };
 
@@ -71,7 +86,15 @@ const ProfileBuildingScreen = ({ navigation, route }) => {
 
   const uploadProfileImage = async (uri) => {
     try {
+      if (!uri) {
+        throw new Error('No image URI provided');
+      }
+
       const response = await fetch(uri);
+      if (!response.ok) {
+        throw new Error('Failed to fetch image data');
+      }
+
       const blob = await response.blob();
       const filename = `profile_${auth.currentUser.uid}_${Date.now()}`;
       const storageRef = ref(storage, `profile_images/${filename}`);
@@ -80,6 +103,7 @@ const ProfileBuildingScreen = ({ navigation, route }) => {
       return await getDownloadURL(storageRef);
     } catch (error) {
       console.error('Error uploading image:', error);
+      setErrorMessage('Failed to upload image. Please try again.');
       return null;
     }
   };
@@ -106,8 +130,11 @@ const ProfileBuildingScreen = ({ navigation, route }) => {
       
       await setDoc(doc(db, 'users', userId), profileData, { merge: true });
       
-      // Navigate to main app - you'll need to update this based on your navigation
-      // navigation.navigate('MainApp');
+      // Navigate to main app using the correct navigation stack
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs' }],
+      });
       
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -138,6 +165,7 @@ const ProfileBuildingScreen = ({ navigation, route }) => {
               value={name}
               onChangeText={setName}
               placeholder="Your name"
+              maxLength={50}
             />
             
             <Text style={styles.label}>Bio</Text>
@@ -147,7 +175,9 @@ const ProfileBuildingScreen = ({ navigation, route }) => {
               onChangeText={setBio}
               multiline
               placeholder="Tell us about yourself..."
+              maxLength={500}
             />
+            <Text style={styles.characterCount}>{bio.length}/500</Text>
           </View>
         )}
         
@@ -399,6 +429,12 @@ const styles = StyleSheet.create({
     color: 'red',
     padding: 15,
     textAlign: 'center',
+  },
+  characterCount: {
+    alignSelf: 'flex-end',
+    color: colors.secondary.gray,
+    fontSize: 12,
+    marginTop: 4,
   },
 });
 
