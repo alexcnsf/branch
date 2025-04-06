@@ -90,7 +90,7 @@ const ChatScreen = ({ route, navigation }) => {
           <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText]}>
             {item.text}
           </Text>
-          <Text style={[styles.timestamp, isMe && styles.myTimestamp]}>
+          <Text style={styles.timestamp}>
             {new Date(item.timestamp?.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
@@ -113,7 +113,7 @@ const ChatScreen = ({ route, navigation }) => {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <FlatList
           ref={flatListRef}
@@ -164,12 +164,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   messagesContainer: {
-    padding: 16,
+    paddingRight: 30,
+    paddingLeft: 0,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
   messageContainer: {
     flexDirection: 'row',
-    marginBottom: 16,
-    alignItems: 'flex-end',
+    marginBottom: 8,
+    alignItems: 'flex-center',
   },
   myMessage: {
     justifyContent: 'flex-end',
@@ -189,7 +192,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   myBubble: {
-    backgroundColor: colors.primary.accent,
+    backgroundColor: colors.primary.main,
     borderBottomRightRadius: 4,
   },
   theirBubble: {
@@ -212,12 +215,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
     alignSelf: 'flex-end',
   },
-  myTimestamp: {
-    color: '#E0E0E0',
-  },
   inputContainer: {
     flexDirection: 'row',
-    padding: 16,
+    padding: 10,
     borderTopWidth: 1,
     borderTopColor: colors.secondary.cream,
     alignItems: 'center',

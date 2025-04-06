@@ -5,16 +5,20 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import { colors } from '../theme/colors';
-import { Ionicons } from '@expo/vector-icons';
 
 const OnboardingScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="leaf" size={120} color={colors.primary.accent} />
+          <Image 
+            source={require('../../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
         <Text style={styles.title}>Welcome to Branch</Text>
         <Text style={styles.subtitle}>
@@ -58,6 +62,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 32,
+    overflow: 'hidden',
+  },
+  logo: {
+    width: 240,
+    height: 240,
   },
   title: {
     fontSize: 32,

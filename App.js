@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from './src/config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { Image } from 'react-native';
 
 // Import screens
 import CommunitiesScreen from './src/screens/CommunitiesScreen';
@@ -24,7 +25,11 @@ const AuthStack = createNativeStackNavigator();
 function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-      <AuthStack.Screen name="Onboarding" component={OnboardingScreen} />
+      <AuthStack.Screen 
+        name="Onboarding" 
+        component={OnboardingScreen}
+        options={{ headerShown: false }}
+      />
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Signup" component={SignupScreen} />
     </AuthStack.Navigator>

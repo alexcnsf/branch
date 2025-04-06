@@ -96,9 +96,6 @@ const CommunitiesScreen = ({ navigation }) => {
       // Update local state
       setUserCommunities(prev => [...prev, communityId]);
       
-      // Show success message
-      Alert.alert('Success', 'You have joined the community!');
-      
       // Refresh the communities lists
       fetchAllCommunities();
       fetchUserCommunities();
