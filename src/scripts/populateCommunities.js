@@ -4,7 +4,7 @@ const { collection, addDoc } = require('firebase/firestore');
 const communities = [
   {
     name: 'Bouldering',
-    image: 'https://images.unsplash.com/photo-1518604666860-9ed391f76460?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+    image: 'https://plus.unsplash.com/premium_photo-1672280952013-b791997f652e?q=80&w=2942&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     members: [],
     availability: [false, false, false, false, false, false, false],
     description: 'Join our bouldering community to connect with fellow climbers, share tips, and find climbing partners.'
@@ -25,7 +25,7 @@ const communities = [
   },
   {
     name: 'Fishing',
-    image: 'https://images.unsplash.com/photo-1501443762994-82bd5dace89a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+    image: 'https://images.unsplash.com/photo-1532015917327-c7c46aa1d930?q=80&w=2880&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     members: [],
     availability: [false, false, false, false, false, false, false],
     description: 'Connect with anglers, share fishing spots, and plan fishing trips together.'
