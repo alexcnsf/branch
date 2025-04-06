@@ -182,6 +182,12 @@ const CommunitiesScreen = ({ navigation }) => {
             [`activeMembers.${index}`]: updatedActiveMembers
           });
         }
+
+        // Update the user's availability in their document
+        const userRef = doc(db, 'users', currentUser.uid);
+        await updateDoc(userRef, {
+          availability: newAvailability
+        });
       } catch (error) {
         console.error('Error updating availability:', error);
         Alert.alert('Error', 'Failed to update availability. Please try again.');
@@ -261,6 +267,9 @@ const CommunitiesScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.headerContainer}>
+        <Text style={styles.appName}>Branch</Text>
+      </View>
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchBar}
@@ -296,8 +305,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.primary.white,
   },
+  headerContainer: {
+    paddingTop: 16,
+    paddingBottom: 8,
+    alignItems: 'center',
+  },
+  appName: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: colors.primary.main,
+    fontFamily: 'Beatrice',
+    letterSpacing: 1,
+  },
   searchContainer: {
     padding: 16,
+    paddingTop: 8,
     backgroundColor: colors.primary.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.secondary.cream,
@@ -305,11 +327,16 @@ const styles = StyleSheet.create({
   searchBar: {
     height: 40,
     borderWidth: 1,
-    borderColor: colors.secondary.gray,
+    borderColor: colors.secondary.cream,
     borderRadius: 20,
     paddingHorizontal: 16,
     color: colors.text.dark,
-    backgroundColor: colors.secondary.cream,
+    backgroundColor: colors.primary.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   scrollView: {
     flex: 1,

@@ -73,11 +73,20 @@ const DiscoverScreen = ({ route, navigation }) => {
         const userDoc = await getDoc(doc(db, 'users', userId));
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          
+          // Get user's availability for this specific community
+          const communityAvailability = Array(7).fill(false);
+          Object.entries(communityData.activeMembers || {}).forEach(([dayIndex, members]) => {
+            if (members.includes(userId)) {
+              communityAvailability[parseInt(dayIndex)] = true;
+            }
+          });
+
           matches.push({
             id: userId,
             name: userData.name,
-            profilePhoto: userData.profilePhoto,
-            availability: userData.availability || [false, false, false, false, false, false, false],
+            profilePhoto: userData.photoURL || userData.profileImage || null,
+            availability: communityAvailability,
             canDrive: userData.canDrive || false,
             notes: userData.notes || '',
             activityCount: userData.activityCount || 0,
@@ -203,7 +212,12 @@ const DiscoverScreen = ({ route, navigation }) => {
     <View style={styles.matchCard}>
       <View style={styles.matchHeader}>
         <View style={styles.profileInfo}>
-          <Image source={{ uri: match.profilePhoto }} style={styles.profilePhoto} />
+          <Image 
+            source={{ 
+              uri: match.profilePhoto || 'https://via.placeholder.com/40'
+            }} 
+            style={styles.profilePhoto} 
+          />
           <View style={styles.nameContainer}>
             <Text style={styles.matchName}>{match.name}</Text>
           </View>
@@ -226,13 +240,15 @@ const DiscoverScreen = ({ route, navigation }) => {
       <View style={styles.matchDetails}>
         <View style={styles.availabilityContainer}>
           {match.availability.map((available, index) => (
-            <View
-              key={index}
-              style={[
-                styles.availabilityDot,
-                { backgroundColor: available ? colors.primary.accent : colors.secondary.gray },
-              ]}
-            />
+            <View key={index} style={styles.dayContainer}>
+              <Text style={styles.dayLabel}>{['M','T','W','Th','F','Sa','Su'][index]}</Text>
+              <View
+                style={[
+                  styles.availabilityDot,
+                  { backgroundColor: available ? colors.primary.accent : colors.secondary.gray },
+                ]}
+              />
+            </View>
           ))}
         </View>
         {match.canDrive && (
@@ -262,7 +278,7 @@ const DiscoverScreen = ({ route, navigation }) => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView style={styles.scrollView}>
-        <Text style={styles.sectionTitle}>Active Members</Text>
+        <Text style={styles.sectionTitle}>{community?.name || 'Community'}</Text>
         {matches.length > 0 ? (
           <FlatList
             data={matches}
@@ -358,12 +374,28 @@ const styles = StyleSheet.create({
   availabilityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  availabilityLabel: {
+    fontSize: 12,
+    color: colors.primary.main,
+    marginRight: 6,
+    fontFamily: 'Beatrice',
+  },
+  dayContainer: {
+    alignItems: 'center',
+    marginRight: 6, 
+  },
+  dayLabel: {
+    fontSize: 10,
+    color: colors.primary.main,
+    marginBottom: 2,
+    fontFamily: 'Beatrice',
   },
   availabilityDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginRight: 6,
   },
   driverInfo: {
     flexDirection: 'row',
